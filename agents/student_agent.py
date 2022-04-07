@@ -1,12 +1,12 @@
 # Student agent: Add your own agent here
-from array import array
-from collections import deque
+from collections import defaultdict, namedtuple
 from random import random, choice, randint
-from unicodedata import name
+from shutil import move
 from agents.agent import Agent
 from store import register_agent
 from threading import Thread
 
+graph = defaultdict(list)
 
 @register_agent("student_agent")
 class StudentAgent(Agent):
@@ -16,7 +16,7 @@ class StudentAgent(Agent):
     """
     def __init__(self):
         super(StudentAgent, self).__init__()
-        self.name = "Gigglebot;)"
+        self.name = "Thanos"
         self.autoplay = True
         self.dir_map = {
             "u": 0,
@@ -45,16 +45,41 @@ class StudentAgent(Agent):
         """
         # dummy return
         
-        analyzer = Thread(target=self.analyze, name="Analyzer", args=(my_pos, chess_board, adv_pos, max_step), daemon=True)
-        analyzer.start()
-        analyzer.join()
+        # analyzer = Thread(target=self.analyze, name="Analyzer", args=(my_pos, chess_board, adv_pos, max_step), daemon=True)
+        # analyzer.start()
+        # analyzer.join()
+        self.analyze(my_pos, chess_board, adv_pos, max_step)
         return my_pos, self.dir_map[dir]
 
     def analyze(self, my_pos: tuple, chess_board, adv_pos: tuple, max_steps: int):
-        return self.move(my_pos, 1)
+        dimension = (max_steps * 2) - 1
+        print("=" * 30)
+        print("Starting Thread...")
+        x, y = my_pos
+        graphView = Graph()
+        node = Vertex(l=None, r=None, u=None, d=None, adv=False, x_val=x, y_val=y)
+        for i in range(max_steps):
+            for d in range(4):
+                if self.is_barrier(chess_board, my_pos, d, dimension) == False:
+                    next_x, next_y = self.move(my_pos, d)
+                    nextnode = Vertex(l=None, r=None, u=None, d=None, adv=False, x_val=next_x, y_val=next_y)
+                    if d  == 0:
+                        node.up = nextnode
+                    if d == 1:
+                        node.right = nextnode
+                    if d == 2:
+                        node.down = nextnode
+                    if d == 3:
+                        node.left = nextnode
+                    # graphView.setVertex(nextnode)
+                    # graphView.setEdge({node, nextnode})
+                    # node = nextnode
+        print(node)
+        print("-" * 30)
+        print("Thread just ended")
+        print("=" * 30)
 
-    @staticmethod
-    def move(position: str, direction: int):
+    def move(self, position: tuple, direction: int):
         moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
         x, y = position
         movex, movey = moves[direction]
@@ -63,68 +88,89 @@ class StudentAgent(Agent):
 
     def putbarrier(self, position: tuple, direction: int):
         if self.is_barrier(position, direction):
-            for i in range(0, 5):
+            for i in range(4):
                 self.putbarrier(position, i)
         else:
             dir = self.dir_map.get(direction)
         return dir       
 
-    def is_boundary(self, position: tuple, direction: int, dimension: int):
+    def is_boundary(self, position: tuple, dimension: int):
         x, y = position
-        if direction == 3 or direction == 1:
-            if x == 0 or x == (dimension - 1) :
-                return True
-        if direction == 0 or direction == 2:
-            if y == 0 or y == (dimension - 1) :
-                return True
-        else:
-            return False
+        return 0 == x == dimension or 0 == y == dimension
 
-    def is_barrier(self, board: array, position: tuple, direction: int, dimension: int):
-        index = self.dir_map[dir]
+    def is_barrier(self, board, position: tuple, direction: int, dimension: int):
         x, y = position
         value = board[x, y]
-        if self.is_boundary(position, direction, dimension):
+        if self.is_boundary(position, dimension):
             return True
-        return value[index]
+        return value[direction]
 
-    def barrier_count(self, position: tuple, dimension: int, board: array):
-        x, y = position
-        if 0 == x == dimension:
-            barrier = barrier + 1
-        if 0 == y == dimension:
-            barrier = barrier + 1
-        for i in self.dir_map.keys():
+    def barrier_count(self, position: tuple, dimension: int, board):
+        barrier = 0
+        for i in self.dir_map.values():
             if self.is_barrier(board, position, i, dimension):
                 barrier = barrier + 1 
         return barrier
-    
-    
-    def path(maxsteps: int):
-        path = []
-        return path[:-1]
-    
-    def bfs(adj, s):
-        parent = {s: None}
-        d = {s: 0}
 
-        queue = deque()
-        queue.append(s)
-
-        while queue:
-            u = queue.popleft()
-            for n in adj[u]:
-                if n not in d:
-                    parent[n] = u
-                    d[n] = d[u] + 1
-                    queue.append(n)
-            return parent, d
+class Vertex(object):
     
-class Cell():
-    def __init__(self, barriers):
-        self.barrier = None # list of barries [up, down, left, right]
-        self.up = None
-        self.down = None
-        self.left = None
-        self.right = None
+    def __init__(self, l, r, u, d, adv, x_val, y_val):
+        self.name = "cell (" + str(x_val) + "," + str(y_val) + ")"
+        self.has_enemy = adv
+        self.right = r
+        self.left = l
+        self.up = u
+        self.down = d
+        self.x_val = x_val
+        self.y_val = y_val
 
+    def __repr__(self):
+        return str({
+            'name': self.name,
+            'has_enemy': self.has_enemy,
+            'right': self.right,
+            'left': self.left,
+            'up': self.up,
+            'down': self.down,
+            'x': self.x_val,
+            'y' : self.y_val
+        })
+
+class Graph(object):
+
+    # G = (V, E)
+    # V = Vertext
+    # E = Edge: (V1 - V2)
+
+    graph =  defaultdict(list)
+
+    def __init__(self, graphdic = None):
+        if graphdic is None:
+            graphdic = {}
+        self.graphdic = graphdic
+
+    def getVertices(self):
+        return list(self.graphdic.keys())
+
+    def getEdges(self):
+        return list(self.graphdic.values())
+
+    def setVertex(self, vertex):
+        if vertex.name not in self.graphdic:
+         self.graphdic[vertex] = []
+
+    def setEdge(self, edge):
+        edge = set(edge)
+        (vertex_1, vertex_2) = tuple(edge)
+        if vertex_1 in self.graphdic:
+            self.graphdic[vertex_1].append(vertex_2)
+        else:
+            self.graphdic[vertex_1] = [vertex_2]
+    
+    def find_distinct_edges(self):
+        edgename = []
+        for vertex in self.graphdic:
+            for next_vertex in self.graphdic[vertex]:
+                if {next_vertex, vertex} not in edgename:
+                    edgename.append({vertex, next_vertex})
+        return edgename
