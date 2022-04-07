@@ -1,5 +1,6 @@
 # Student agent: Add your own agent here
 from collections import defaultdict, namedtuple
+from importlib.resources import path
 from random import random, choice, randint
 from shutil import move
 from agents.agent import Agent
@@ -58,26 +59,40 @@ class StudentAgent(Agent):
         x, y = my_pos
         graphView = Graph()
         node = Vertex(l=None, r=None, u=None, d=None, adv=False, x_val=x, y_val=y)
-        for i in range(max_steps):
-            for d in range(4):
-                if self.is_barrier(chess_board, my_pos, d, dimension) == False:
-                    next_x, next_y = self.move(my_pos, d)
-                    nextnode = Vertex(l=None, r=None, u=None, d=None, adv=False, x_val=next_x, y_val=next_y)
-                    if d  == 0:
-                        node.up = nextnode
-                    if d == 1:
-                        node.right = nextnode
-                    if d == 2:
-                        node.down = nextnode
-                    if d == 3:
-                        node.left = nextnode
-                    # graphView.setVertex(nextnode)
-                    # graphView.setEdge({node, nextnode})
-                    # node = nextnode
-        print(node)
+        path = self.paths(max_steps, chess_board, my_pos, dimension)
+        print(path)
         print("-" * 30)
         print("Thread just ended")
         print("=" * 30)
+
+    def paths(self, max_steps, chess_board, my_pos, dimension):
+        x, y = my_pos
+        depth = 0
+        node = Vertex(l=None, r=None, u=None, d=None, adv=False, x_val=x, y_val=y)
+        if depth == max_steps:
+            return node
+        else:
+            while max_steps > 0:
+                for d in range(4):
+                    if self.is_barrier(chess_board, my_pos, d, dimension) == False:
+                        if d  == 0:
+                            my_pos = self.move(my_pos, d)
+                            max_steps = max_steps - 1
+                            node.up = self.paths(max_steps, chess_board, my_pos, dimension)
+                        if d == 1:
+                            max_steps = max_steps - 1
+                            my_pos = self.move(my_pos, d)
+                            node.right = self.paths(max_steps, chess_board, my_pos, dimension)
+                        if d == 2:
+                            max_steps = max_steps - 1
+                            my_pos = self.move(my_pos, d)
+                            node.down = self.paths(max_steps, chess_board, my_pos, dimension)                       
+                        if d == 3:
+                            max_steps = max_steps - 1
+                            my_pos = self.move(my_pos, d)
+                            node.left = self.paths(max_steps, chess_board, my_pos, dimension)
+                max_steps = max_steps - 1
+            return node
 
     def move(self, position: tuple, direction: int):
         moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
