@@ -7,7 +7,6 @@ from agents.agent import Agent
 from store import register_agent
 from threading import Thread
 
-graph = defaultdict(list)
 
 @register_agent("student_agent")
 class StudentAgent(Agent):
@@ -46,52 +45,55 @@ class StudentAgent(Agent):
         """
         # dummy return
         
-        # analyzer = Thread(target=self.analyze, name="Analyzer", args=(my_pos, chess_board, adv_pos, max_step), daemon=True)
-        # analyzer.start()
-        # analyzer.join()
-        self.analyze(my_pos, chess_board, adv_pos, max_step)
+        analyzer = Thread(target=self.analyze, name="Analyzer", args=(my_pos, chess_board, adv_pos, max_step), daemon=True)
+        analyzer.start()
+        analyzer.join()
+        # self.analyze(my_pos, chess_board, adv_pos, max_step)
         return my_pos, self.dir_map[dir]
 
     def analyze(self, my_pos: tuple, chess_board, adv_pos: tuple, max_steps: int):
         dimension = (max_steps * 2) - 1
         print("=" * 30)
         print("Starting Thread...")
-        x, y = my_pos
-        graphView = Graph()
-        node = Vertex(l=None, r=None, u=None, d=None, adv=False, x_val=x, y_val=y)
-        path = self.paths(max_steps, chess_board, my_pos, dimension)
+        path = self.paths(max_steps, chess_board, my_pos, adv_pos, dimension)
         print(path)
         print("-" * 30)
         print("Thread just ended")
         print("=" * 30)
 
-    def paths(self, max_steps, chess_board, my_pos, dimension):
+    def paths(self, max_steps, chess_board, my_pos, adv_pos, dimension):
         x, y = my_pos
         depth = 0
         node = Vertex(l=None, r=None, u=None, d=None, adv=False, x_val=x, y_val=y)
         if depth == max_steps:
             return node
+        if my_pos == adv_pos:
+            return node
         else:
             while max_steps > 0:
                 for d in range(4):
-                    if self.is_barrier(chess_board, my_pos, d, dimension) == False:
-                        if d  == 0:
+                    if d  == 0:
+                        if self.is_barrier(chess_board, my_pos, d, dimension) == False:
                             my_pos = self.move(my_pos, d)
                             max_steps = max_steps - 1
-                            node.up = self.paths(max_steps, chess_board, my_pos, dimension)
-                        if d == 1:
+                            node.up = self.paths(max_steps, chess_board, my_pos, adv_pos, dimension)
+                    if d == 1:
+                        if self.is_barrier(chess_board, my_pos, d, dimension) == False:
                             max_steps = max_steps - 1
                             my_pos = self.move(my_pos, d)
-                            node.right = self.paths(max_steps, chess_board, my_pos, dimension)
-                        if d == 2:
+                            node.right = self.paths(max_steps, chess_board, my_pos, adv_pos, dimension)
+                    if d == 2:
+                        if self.is_barrier(chess_board, my_pos, d, dimension) == False:
                             max_steps = max_steps - 1
                             my_pos = self.move(my_pos, d)
-                            node.down = self.paths(max_steps, chess_board, my_pos, dimension)                       
-                        if d == 3:
+                            node.down = self.paths(max_steps, chess_board, my_pos, adv_pos, dimension)                       
+                    if d == 3:
+                        if self.is_barrier(chess_board, my_pos, d, dimension) == False:
                             max_steps = max_steps - 1
                             my_pos = self.move(my_pos, d)
-                            node.left = self.paths(max_steps, chess_board, my_pos, dimension)
+                            node.left = self.paths(max_steps, chess_board, my_pos, adv_pos, dimension)
                 max_steps = max_steps - 1
+                depth = depth + 1
             return node
 
     def move(self, position: tuple, direction: int):
